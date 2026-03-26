@@ -10,6 +10,7 @@ import (
 	"net/http"
 )
 
+// Per https://developers.zoom.us/docs/api/meetings/events/#tag/recording/postrecording.completed
 type WebhookBody struct {
 	Event          string          `json:"event"`
 	Payload        json.RawMessage `json:"payload"`
@@ -47,6 +48,7 @@ type PayloadRecordingCompleted struct {
 	} `json:"object"`
 }
 
+// Per https://developers.zoom.us/docs/api/webhooks/#verify-webhook-events
 func ValidateSender(r *http.Request, body []byte, apiKey string) error {
 	log.Println("Verifying Sender")
 	requestSignature := r.Header.Get("x-zm-signature")
@@ -81,6 +83,7 @@ func ValidateSender(r *http.Request, body []byte, apiKey string) error {
 	return nil
 }
 
+// Per https://developers.zoom.us/docs/api/webhooks/#validate-your-webhook-endpoint
 func ValidateZoomWebhook(w http.ResponseWriter, body WebhookBody, apiKey string) {
 	payload := PayloadVerfication{}
 	err := json.Unmarshal(body.Payload, &payload)

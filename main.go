@@ -1,17 +1,24 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"slices"
 
 	"github.com/joho/godotenv"
+	"github.com/jthughes/zoom2onedrive/internal/onedrive"
 	"github.com/jthughes/zoom2onedrive/internal/zoom"
 )
 
 type Config struct {
-	ZoomApiKey string
+	Zoom struct {
+		ApiKey string
+	}
+	OneDrive onedrive.OneDriveConfig
 }
 
 func main() {
@@ -20,8 +27,13 @@ func main() {
 	godotenv.Load(".env")
 
 	cfg := Config{
-		ZoomApiKey: os.Getenv("ZOOM_API_TOKEN"),
+		Zoom: struct{ ApiKey string }{
+			ApiKey: os.Getenv("ZOOM_API_TOKEN"),
+		},
+		OneDrive: onedrive.InitOneDrive(),
 	}
+
+	cfg.OneDrive.UploadFileToFolder("", "")
 
 	mux := http.NewServeMux()
 
@@ -37,7 +49,7 @@ func main() {
 
 }
 
-func ManageRecording(payload zoom.PayloadRecordingCompleted, downloadToken string) {
+func (cfg Config) ManageRecording(payload zoom.PayloadRecordingCompleted, downloadToken string) {
 	log.Println("Start syncing Recording")
 
 	// log.Printf("%+v\n", payload)
@@ -51,19 +63,36 @@ func ManageRecording(payload zoom.PayloadRecordingCompleted, downloadToken strin
 		}
 		log.Printf("%s recording type availabvle - Downloading!", file.RecordingType)
 		log.Printf("%+v\n", file)
-		// req, err := http.NewRequest("GET", file.DownloadURL, nil)
-		// if err != nil {
 
-		// }
-		// req.Header.Set("Content-Type", "appliccation/json")
-		// req.Header.Set("authorization", fmt.Sprintf("Bearer %s", downloadToken))
+		// Download recording
+		req, err := http.NewRequest("GET", file.DownloadURL, nil)
+		if err != nil {
 
-		// client := &http.Client{}
-		// res, err := client.Do(req)
-		// if err != nil {
+		}
+		req.Header.Set("Content-Type", "appliccation/json")
+		req.Header.Set("authorization", fmt.Sprintf("Bearer %s", downloadToken))
 
-		// }
-		// defer res.Body.Close()
+		client := &http.Client{}
+		res, err := client.Do(req)
+		if err != nil {
+			// err
+		}
+		defer res.Body.Close()
+
+		data, err := io.ReadAll(res.Body)
+		if err != nil {
+			// err
+		}
+
+		// Save to temp file
+		downloadPath := filepath.Join(os.TempDir(), file.ID)
+		err = os.WriteFile(downloadPath, data, 0644)
+		if err != nil {
+			// err
+		}
+		defer os.Remove(downloadPath)
+
+		cfg.OneDrive.UploadFileToFolder(downloadPath, "")
 
 	}
 

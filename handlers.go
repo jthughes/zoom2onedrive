@@ -18,7 +18,7 @@ func (cfg Config) handlerZoomWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//	Test signatures
-	if err := zoom.ValidateSender(r, bodydata, cfg.ZoomApiKey); err != nil {
+	if err := zoom.ValidateSender(r, bodydata, cfg.Zoom.ApiKey); err != nil {
 		respondWithError(w, http.StatusUnauthorized, http.StatusText(http.StatusUnauthorized), err)
 		return
 	}
@@ -32,7 +32,7 @@ func (cfg Config) handlerZoomWebhook(w http.ResponseWriter, r *http.Request) {
 
 	if whBody.Event == "endpoint.url_validation" {
 		log.Println("Starting Validation of Webhook")
-		zoom.ValidateZoomWebhook(w, whBody, cfg.ZoomApiKey)
+		zoom.ValidateZoomWebhook(w, whBody, cfg.Zoom.ApiKey)
 		return
 	}
 
@@ -53,5 +53,5 @@ func (cfg Config) handlerZoomWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//	Start download go routine
-	go ManageRecording(payload, whBody.DownloadToken)
+	go cfg.ManageRecording(payload, whBody.DownloadToken)
 }
